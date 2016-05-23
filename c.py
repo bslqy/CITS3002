@@ -27,7 +27,7 @@ class timer(threading.Thread):
     def close(self):
 		self.isrun=False
 		
-    def upload(self,filename):
+    def uploadFile(self,filename):
         print "server ready , now client sending file~~"
 	try:
 		f = open(filename,'rb')
@@ -46,7 +46,7 @@ class timer(threading.Thread):
 		#Notify the java server that the file is complete
 		print "send file success!"	
 	except IOError:
-		print "No such file or Directory"	
+		print "No such File or Directory"	
 		
     def recvfile(self, filename):
         print "Start download file"
@@ -61,7 +61,7 @@ class timer(threading.Thread):
 			data = f.read();
 			#if file is none
 			if not data:
-				print "CANNOT SEND EMPTY FILE"
+				print "CANNOT SEND EMPTY Certificate"
 				break;
 			#Notify the java server that a file is going to be sent. 		
 			#sprt stands for seperator
@@ -72,7 +72,7 @@ class timer(threading.Thread):
 		#Notify the java server that the file is complete
 		print "send certificate success!"	
 	except IOError:
-		print "No such file or Directory"
+		print "No such File or Directory"
 	
 
 def main():
@@ -82,8 +82,6 @@ def main():
 	
     while (True):
         # get input from user
-		
-		
 		message = str(raw_input("send> "));
 		
 		#Space exists and not occupies the first place  
@@ -93,9 +91,8 @@ def main():
 			
 			if splitedMessage[0] == "-a":
 			    # len(splitedMessage) return the size of array after token, need to be exactly 2;
-				#normal execution
 				if len(splitedMessage)==2 and splitedMessage[1]!= "":
-				    client.upload(message[message.find(" ")+1:])				
+				    client.uploadFile(splitedMessage[1]);				
 				else:
 					print "Usage:\n -a filename\n"			
 									
@@ -122,7 +119,7 @@ def main():
 				    						
 			if splitedMessage[0] == "-h":
 				if len(splitedMessage)==2 and splitedMessage[1]!= "":
-					print "provide the remote address hosting the oldtrusty server"					
+					client.send()			
 				else:
 					print "Usage:\n -h hostname:port\n"
 					
@@ -131,8 +128,7 @@ def main():
 					print "require a circle of trust to involve the named person (i.e. their certificate)"			
 				else:
 					print "Usage:\n -n name\n"
-				
-				
+							
 			if splitedMessage[0] == "-u":
 				len(splitedMessage)==2 and splitedMessage[1]!= "":
 					uploadCertificate(splitedMessage[1]);
@@ -160,7 +156,7 @@ def main():
 			client.close();
 			time.sleep(0.01);
 			
-		#Normal Commmunication 	
+		#Normal Commmunication , will be deleted afterward. 
 		else: 
 			print "Other situation"		
 			print message;
