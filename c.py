@@ -51,10 +51,29 @@ class timer(threading.Thread):
     def recvfile(self, filename):
         print "Start download file"
         self.ssl_sock.send("DOWNLOAD"+"sprt"+filename+'\n');
+		# If file does not exist then Java server will send back an error message
         
+	def uploadCertificate(self,certificate_name):
+        print "server ready , now client sending file~~"
+	try:
+		f = open(certificate_name,'rb')
+		while (True):
+			data = f.read();
+			#if file is none
+			if not data:
+				print "CANNOT SEND EMPTY FILE"
+				break;
+			#Notify the java server that a file is going to be sent. 		
+			#sprt stands for seperator
+			self.ssl_sock.sendall("CERT"+"sprt"+certificate_name+"sprt"+data+'\n')
+			break;
+		f.close();		
+		time.sleep(1)
+		#Notify the java server that the file is complete
+		print "send certificate success!"	
+	except IOError:
+		print "No such file or Directory"
 	
-
-	  
 
 def main():
     client = timer()
@@ -69,68 +88,71 @@ def main():
 		
 		#Space exists and not occupies the first place  
 		if ((message.find(" "))!= -1 and message.find(" ")>0):
+		    # Token the message
 			splitedMessage = message.split(" ");
-			if message[0:message.find(" ")] == "-a":
-				#if there is a space but  there is nothing following -a "-a "
-				#or if there are more than one space following -a "-a  j" or "-a h j"  len(message.split(" ") return the size of array after token, need to be exactly 2;
-				if not splitedMessage[1] or len(splitedMessage)>2 :
-					print "Usage -a filename\n"					
-				#normal execution	
+			
+			if splitedMessage[0] == "-a":
+			    # len(splitedMessage) return the size of array after token, need to be exactly 2;
+				#normal execution
+				if len(splitedMessage)==2 and splitedMessage[1]!= "":
+				    client.upload(message[message.find(" ")+1:])				
 				else:
-					client.upload(message[message.find(" ")+1:])			
-				
-			if message[0:message.find(" ")] == "-c":
-				if not (splitedMessage[1]) or len(splitedMessage)>2 :
-					print "Usage -c number\n"	
-				else:		
+					print "Usage:\n -a filename\n"			
+									
+			if splitedMessage[0] == "-c":
+				if len(splitedMessage)==2 and splitedMessage[1]!= "":
 					print "provide the required circumference (length) of a circle of trust"
+				else:		
+					print "Usage:\n -c number\n"
 				
-			if message[0:message.find(" ")] == "-f":
-				if not (splitedMessage[1]) or len(splitedMessage)>4 :
-				    print "Usage -f filename\n or -f filename -c number\n or -f filename -n name\n"
-				elif len(splitedMessage) == 4 and (splitedMessage[0])!="" and (splitedMessage[1])!="" and (splitedMessage[2])!="" and (splitedMessage[3])!="":
-				#-f filename -c number or -f filename -n name
-					print "Usage -f filename\n or -f filename -c number\n or -f filename -n name\n"				
-				else:	
-				    client.recvfile(splitedMessage[1])	
+			if splitedMessage[0] == "-f":
+			
+				#-f filename
+				if (len(splitedMessage)==2) and splitedMessage[1] !="":
+					client.recvfile(splitedMessage[1]);
 					
-			if message[0:message.find(" ")] == "-h":
-				if not (message.split(" ")[1]) or len(message.split(" "))>2 :
-					print "Usage- h hostname:port\n"					
+				#-f filename -c number or -f filename -n name
+				elif len(splitedMessage) == 4 and (splitedMessage[1])!="" and (splitedMessage[2])!="" and (splitedMessage[3])!="":
+					if(splitedMessage[2]) == "-c":
+						print "-f filename -c number"	
+					elif(splitedMessage[2]) == "-n"
+						print "-f filename -n name"
+				else:	
+					print "Usage:\n -f filename\n or -f filename -c number\n or -f filename -n name\n"
+				    						
+			if splitedMessage[0] == "-h":
+				if len(splitedMessage)==2 and splitedMessage[1]!= "":
+					print "provide the remote address hosting the oldtrusty server"					
 				else:
-					print "provide the remote address hosting the oldtrusty server"
-				
-				
-			if message[0:message.find(" ")] == "-n":
-				if not (message.split(" ")[1]) or len(message.split(" "))>2 :
-					print "Usage -n name\n"					
+					print "Usage:\n -h hostname:port\n"
+					
+			if splitedMessage[0] == "-n":
+				len(splitedMessage)==2 and splitedMessage[1]!= "":
+					print "require a circle of trust to involve the named person (i.e. their certificate)"			
 				else:
-					print "require a circle of trust to involve the named person (i.e. their certificate)"
+					print "Usage:\n -n name\n"
 				
 				
-			if message[0:message.find(" ")] == "-u":
-				if not (message.split(" ")[1]) or len(message.split(" "))>2 :
-					print "Usage -u certificate\n"					
+			if splitedMessage[0] == "-u":
+				len(splitedMessage)==2 and splitedMessage[1]!= "":
+					uploadCertificate(splitedMessage[1]);
+					print "upload a certificate to the oldtrusty server"					
 				else:
-					print "upload a certificate to the oldtrusty server"
-				
-						
-			if message[0:message.find(" ")] == "-v":
+					print "Usage:\n -u certificate\n"
+									
+			if splitedMessage[0] == "-v":
 				#if there are exactly two spaces "-v a b" , normal execution
-				if(len(message.split(" ")) == 3):
+				if(len(splitedMessage) == 3) and splitedMessage[1] !="" and splitedMessage[2]!="":
 					print "vouch for the authenticity of an existing file in the oldtrusty server using the indicated certificate"
 				else:
-					print "Usage: -v filename certificate\n"
-					
-					
-												
+					print "Usage:\n -v filename certificate\n"
+														
 		elif (message == "-l"):
 			client.send("LIST"+"sprt");
 			print "list all stored files and how they are protected"
 			
-		
 		elif(message=="-a") or (message=="-c") or (message=="-f")or (message=="-h") or (message=="-n")or (message=="-u") or (message=="-u") or (message=="-v"):
-			print"Usage :\n","-a filename\n" "-c number\n", "-f filename\n","-h hostname:port\n","-n name\n","-u certificate\n","-v filename certificate\n"
+			print"Usage: \n","-a filename\n","-c number\n", "-f filename\n","-h hostname:port\n","-n name\n","-u certificate\n","-v filename certificate\n"
 		
 		# exit if the input is 'exit'		
 		elif (message == "exit"):
