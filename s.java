@@ -1,3 +1,5 @@
+package com.company;
+
 import javax.net.ssl.*;
 import javax.security.cert.Certificate;
 import java.io.*;
@@ -82,7 +84,7 @@ public class s implements Runnable {
 
     public void run() {
         try {
-			 SSLServerSocket sslserversocket = getServerSocket(9991);
+            SSLServerSocket sslserversocket = getServerSocket(9991);
             while (true) {
                 SSLSocket  client = (SSLSocket)sslserversocket.accept();
                 socketList.add(client);
@@ -121,8 +123,11 @@ public class s implements Runnable {
                         socketList.remove(client);
                         System.out.println("connection close");
                     }
+                    
+                    //-a fileName
                     if(type.equals("FILE"))
                     {
+                        //FILE % filename % data
                         try {
                             String fileName = listMsg.split("sprt")[1];
                             String info = listMsg.split("sprt")[2];
@@ -131,6 +136,8 @@ public class s implements Runnable {
                             output.println("Receive " + fileName + "successfully");
                             myFile mf = new myFile(f);
                             fileList.add(mf);
+                            
+                            //Not necessary. Just for testing 
                             for(myFile file: fileList)
                             {
                                 System.out.println(file.getFileName());
@@ -142,9 +149,12 @@ public class s implements Runnable {
                         String info = listMsg.split("sprt")[1];
                         System.out.println("Receive Normal Message from" + client.getInetAddress()+":\n" + info);
                     }
+                    
+                    // -f filename
                     if(type.equals("DOWNLOAD"))
                     {
-                        String fileName = "H:\\"+listMsg.split("sprt")[1]; //DOWNLOAD%fileName%-c% number'
+                        //DOWNLOAD % filename
+                        String fileName = "H:\\"+listMsg.split("sprt")[1];
                         System.out.println("Receive DOWNLOAD "+fileName + " command from "+ client.getInetAddress()+ ":\n");
 
                         if(fileList.size() == 0)
@@ -167,6 +177,25 @@ public class s implements Runnable {
                         }
                     }
 
+                    //-f filename -c number
+                    if(type.equals("FC"))
+                    {
+                        //FC%fileName%number
+
+                    }
+
+                    //-f filename -n name
+                    if(type.equals("FN"))
+                    {
+                        //FN%fileName%name
+                    }
+                    
+                    //-h hostname:port
+                    if(type.equals("HOST"))
+                    {
+
+                    }
+                    // -l
                     if(type.equals("LIST"))
                     {
                         System.out.println("Receive List Command from "+ client.getInetAddress()+":\n");
@@ -178,24 +207,62 @@ public class s implements Runnable {
                         {
                             for(myFile f : fileList)
                             {
-                                output.println(f.getFileName());
+                                output.println(f.getFileName() + f.getHowManyPeopleHaveVouched() + f.getCircleSize());
                             }
                         }
                     }
-
-                    if(type.equals("U&P"))
+                    
+                    //-l -c number
+                    if(type.equals("LC"))
                     {
-                        System.out.println("Receive Password from " + client.getInetAddress() + ":\n");
-                        String username = listMsg.split("sprt")[1];
-                        String password = listMsg.split("sprt")[2];
-                        if(username.equals("aaa")&& password.equals("123"))
+                        //LC%fileName%number
+                        String requiredFileName = listMsg.split("sprt")[1];
+                        int requiredCircleNumber = Integer.valueOf(listMsg.split("sprt")[2]);
+
+                        System.out.println("Receive List+Circle Command from "+ client.getInetAddress()+":\n");
+                        if(fileList.size() == 0)
                         {
-                            output.printf("YES");
+                            output.println("No file exist");
                         }
-                        else{
-                            output.printf("NO");
+                        else
+                        {
+                            for(myFile f : fileList)
+                            {
+                                if (f.getFileName().equals(requiredFileName) && f.getCircleSize()==requiredCircleNumber)
+                                {
+                                output.println(f.getFileName() + f.getHowManyPeopleHaveVouched() + f.getCircleSize());
+                                }
+                            }
+                            // Give a message that the loop finished. If nothing returns at this point the client will know.
+                            output.println("Command execution finished ");
                         }
                     }
+
+                    //-l -n name
+                    if(type.equals("LN"))
+                    {
+                        //LC%fileName%Name
+                    }
+
+                    //-u certificateName
+                    if(type.equals("CER"))
+                    {
+                        //CRE%certificateName
+                    }
+
+//                    if(type.equals("U&P"))
+//                    {
+//                        System.out.println("Receive Password from " + client.getInetAddress() + ":\n");
+//                        String username = listMsg.split("sprt")[1];
+//                        String password = listMsg.split("sprt")[2];
+//                        if(username.equals("aaa")&& password.equals("123"))
+//                        {
+//                            output.printf("YES");
+//                        }
+//                        else{
+//                            output.printf("NO");
+//                        }
+//                    }
 
                 }
             } catch (IOException e) {
@@ -220,7 +287,7 @@ public class s implements Runnable {
     }
 }
 
- class myFile {
+class myFile {
     ArrayList<String> vouch = new ArrayList<>();
     File FileName;
     int HowManyPeopleHaveVouched = 0;
@@ -249,19 +316,19 @@ public class s implements Runnable {
         return circleSize;
     }
 
-     public void setVouch(String person) {
-         vouch.add(person);
-     }
+    public void setVouch(String person) {
+        vouch.add(person);
+    }
 
-     public void setHowManyPeopleHaveVouched() {
-         HowManyPeopleHaveVouched ++;
-     }
+    public void setHowManyPeopleHaveVouched() {
+        HowManyPeopleHaveVouched ++;
+    }
 
-     public void setCircleSize(int circleSize) {
-         this.circleSize = circleSize;
-     }
+    public void setCircleSize(int circleSize) {
+        this.circleSize = circleSize;
+    }
 
-     public myFile(File fileName) {
+    public myFile(File fileName) {
         FileName = fileName;
     }
 
