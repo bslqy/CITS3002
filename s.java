@@ -11,8 +11,8 @@ import java.util.Scanner;
 public class s implements Runnable {
 
 
-    List<SSLSocket> socketList= new ArrayList<SSLSocket>();
-    List<File> FileList= new ArrayList<File>();
+    List<Socket> socketList= new ArrayList<Socket>();
+    List<myFile> FileList= new ArrayList<myFile>();
     List<Certificate> CertificateList = new ArrayList<Certificate>();
 
     public static void main(String[] args) {
@@ -23,7 +23,7 @@ public class s implements Runnable {
         while(true){
             System.out.printf("Send> ");
             String message = scanner.nextLine();
-            if(message.equals("") || message.equals("/n")){
+            if(message.equals("") || message.equals("\n")){
                 continue;
             }else{
                 manager.send(message);
@@ -31,19 +31,6 @@ public class s implements Runnable {
         }
     }
 
-	public void run() {
-		SSLServerSocket sslserversocket;
-        try {
-			sslserversocket = getServerSocket(9991);
-            while (true) {
-                SSLSocket  client = (SSLSocket)sslserversocket.accept();
-                socketList.add(client);
-                new Thread(new SSocket(client,socketList,FileList)).start();
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
     public void send(String message){
 
         for(Socket s:socketList){
@@ -56,7 +43,6 @@ public class s implements Runnable {
             }
         }
     }
-
 
 
     private static SSLServerSocket getServerSocket(int thePort)
@@ -82,7 +68,7 @@ public class s implements Runnable {
 
             sslContext.init(kmf.getKeyManagers(),null,null);
 
-            
+
             SSLServerSocketFactory factory=sslContext.getServerSocketFactory();
 
             s=(SSLServerSocket)factory.createServerSocket(thePort);
@@ -94,14 +80,25 @@ public class s implements Runnable {
         return(s);
     }
 
-    
+    public void run() {
+        try {
+			 SSLServerSocket sslserversocket = getServerSocket(9991);
+            while (true) {
+                SSLSocket  client = (SSLSocket)sslserversocket.accept();
+                socketList.add(client);
+                new Thread(new SSocket(client,socketList,FileList)).start();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
     class SSocket implements Runnable {
         SSLSocket client;
-        List<SSLSocket> socketList;
-        List<File> fileList;
+        List<Socket> socketList;
+        List<myFile> fileList;
 
-        public SSocket(SSLSocket client,List<SSLSocket> socketList,List<File> fileList) {
+        public SSocket(SSLSocket client,List<Socket> socketList,List<myFile> fileList) {
             this.client = client;
             this.socketList = socketList;
             this.fileList = fileList;
@@ -132,10 +129,11 @@ public class s implements Runnable {
                             File f = createFile(fileName,info);
                             //System.out.println(info);
                             output.println("Receive " + fileName + "successfully");
-                            fileList.add(f);
-                            for(File file: fileList)
+                            myFile mf = new myFile(f);
+                            fileList.add(mf);
+                            for(myFile file: fileList)
                             {
-                                System.out.println(file.toString());
+                                System.out.println(file.getFileName());
                             }
                         }catch (Exception e){e.printStackTrace();}
                     }
@@ -154,10 +152,10 @@ public class s implements Runnable {
                             output.println("NO FILE EXISTS !");
                         }
                         else {
-                            for (File f : fileList) {
-                                if (f.toString().equals(fileName)) {
-                                    BufferedReader br = new BufferedReader(new FileReader(f));
-
+                            for (myFile mf : fileList) {
+                                //Looking at the directory of a particular file
+                                if (mf.getFileName().equals(fileName)) {
+                                    BufferedReader br = new BufferedReader(new FileReader(mf.getFile()));
                                     while(br.ready()){
                                         output.println(br.readLine());
                                     }
@@ -178,20 +176,31 @@ public class s implements Runnable {
                         }
                         else
                         {
-                            for(File f : fileList)
+                            for(myFile f : fileList)
                             {
-                                output.println(f.toString());
+                                output.println(f.getFileName());
                             }
                         }
                     }
+
+                    if(type.equals("U&P"))
+                    {
+                        System.out.println("Receive Password from " + client.getInetAddress() + ":\n");
+                        String username = listMsg.split("sprt")[1];
+                        String password = listMsg.split("sprt")[2];
+                        if(username.equals("aaa")&& password.equals("123"))
+                        {
+                            output.printf("YES");
+                        }
+                        else{
+                            output.printf("NO");
+                        }
+                    }
+
                 }
             } catch (IOException e) {
                 e.printStackTrace();
             }
-
-        }
-        public void download(File file)
-        {
 
         }
 
@@ -209,4 +218,51 @@ public class s implements Runnable {
             return  f;
         }
     }
+}
+
+ class myFile {
+    ArrayList<String> vouch = new ArrayList<>();
+    File FileName;
+    int HowManyPeopleHaveVouched = 0;
+    int circleSize = 0;
+
+    public ArrayList<String> getVouch() {
+        return vouch;
+    }
+
+    public String getFileName() {
+        return FileName.toString();
+    }
+
+    public File getFile()
+    {
+        return FileName;
+    }
+
+    public int getHowManyPeopleHaveVouched()
+    {
+        return HowManyPeopleHaveVouched;
+    }
+
+    public int getCircleSize()
+    {
+        return circleSize;
+    }
+
+     public void setVouch(String person) {
+         vouch.add(person);
+     }
+
+     public void setHowManyPeopleHaveVouched() {
+         HowManyPeopleHaveVouched ++;
+     }
+
+     public void setCircleSize(int circleSize) {
+         this.circleSize = circleSize;
+     }
+
+     public myFile(File fileName) {
+        FileName = fileName;
+    }
+
 }
