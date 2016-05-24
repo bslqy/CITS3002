@@ -31,19 +31,6 @@ public class s implements Runnable {
         }
     }
 
-	public void run() {
-		SSLServerSocket sslserversocket;
-        try {
-			sslserversocket = getServerSocket(9991);
-            while (true) {
-                SSLSocket  client = (SSLSocket)sslserversocket.accept();
-                socketList.add(client);
-                new Thread(new SSocket(client,socketList,FileList)).start();
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
     public void send(String message){
 
         for(Socket s:socketList){
@@ -94,7 +81,18 @@ public class s implements Runnable {
         return(s);
     }
 
-    
+    public void run() {
+        try {
+			SSLServerSocket sslserversocket = getServerSocket(9991);
+            while (true) {
+                SSLSocket  client = (SSLSocket)sslserversocket.accept();
+                socketList.add(client);
+                new Thread(new SSocket(client,socketList,FileList)).start();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
     class SSocket implements Runnable {
         SSLSocket client;
@@ -168,7 +166,18 @@ public class s implements Runnable {
                             }
                         }
                     }
-
+					
+                     if(type.equals("U&P"))
+                    {
+                        System.out.println("Receive Password from " + client.getInetAddress() + ":\n");
+                        String username = listMsg.split("sprt")[1];
+                        String password = listMsg.split("sprt")[2];
+                        if(username.equals("aaa")&& password.equals("123"))
+                        {
+                            output.println("OK");
+                        }
+                    }
+					
                     if(type.equals("LIST"))
                     {
                         System.out.println("Receive List Command from "+ client.getInetAddress()+":\n");
@@ -210,3 +219,4 @@ public class s implements Runnable {
         }
     }
 }
+
