@@ -90,11 +90,14 @@ def main():
 				#-f filename
 				if (len(splitedMessage)==2) and splitedMessage[1] !="":
 					client.recvfile(splitedMessage[1]);					
-				# -f filename -c number or -f filename -n name
+				# -f filename -c number 
+				#  -f filename -n name
 				elif len(splitedMessage) == 4 and (splitedMessage[1])!="" and (splitedMessage[2])!="" and (splitedMessage[3])!="":
 					if(splitedMessage[2]) == "-c":
+						send("FC"+'sprt'+splitedMessage[1]+'sprt'+splitedMessage[3])
 						print "-f filename -c number"	
 					elif(splitedMessage[2]) == "-n":
+						send("FN"+'sprt'+splitedMessage[1]+'sprt'+splitedMessage[3])
 						print "-f filename -n name"
 				else:	
 					print "Usage:\n -f filename\n or -f filename -c number\n or -f filename -n name\n"
@@ -119,12 +122,22 @@ def main():
 					print "Usage:\n -u certificate\n"
 									
 			if splitedMessage[0] == "-v":
-				#if there are exactly two spaces "-v a b" , normal execution
+				#if there are exactly two spaces "-v filename certificate" , normal execution
 				if(len(splitedMessage) == 3) and splitedMessage[1] !="" and splitedMessage[2]!="":
+					send("VOUCH"+"sprt"+splitedMessage[1]+"sprt"+splitedMessage[2])
 					print "vouch for the authenticity of an existing file in the oldtrusty server using the indicated certificate"
 				else:
 					print "Usage:\n -v filename certificate\n"
-														
+					
+			if splitedMessage[0] == "-l":
+				if(len(splitedMessage) == 3) and splitedMessage[1] !="" and splitedMessage[2]!="":
+					# -l -c number
+					if(splitedMessage[1] == "-c"):
+						send("LC"+'sprt'+splitedMessage[2]);
+					# -l -n name
+					elif(plitedMessage[1] == "-n"):
+						send("LN"+'sprt'+splitedMessage[2]);
+				 														
 		elif (message == "-l"):
 			client.send("LIST"+"sprt");
 			print "list all stored files and how they are protected"
