@@ -1,5 +1,7 @@
 
-#Thursday 26/5/2016 Implement -h hostname:port at log in. -h localhost:9991 will log you in. We use this to connect other computer.
+#Thursday 26/5/2016 Implement -h hostname:port at log in. 
+-h localhost:9991 will log you in. 
+We use this to connect other computer.
 
 #Remember to change directory when using -a,-f and -u.
 
