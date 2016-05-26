@@ -1,19 +1,18 @@
+
 import javax.net.ssl.*;
-import javax.security.cert.Certificate;
 import java.io.*;
-import java.net.ServerSocket;
 import java.net.Socket;
 import java.security.KeyStore;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Scanner;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
+import java.util.*;
 
 public class s implements Runnable {
 
 
-    List<SSLSocket> socketList= new ArrayList<SSLSocket>();
-    List<File> FileList= new ArrayList<File>();
-    List<Certificate> CertificateList = new ArrayList<Certificate>();
+    List<Socket> socketList= new ArrayList<Socket>();
+    List<myFile> FileList= new ArrayList<myFile>();
+    HashMap<String,X509Certificate> CertificateMap = new HashMap<>();
 
     public static void main(String[] args) {
         s manager = new s();
@@ -23,7 +22,7 @@ public class s implements Runnable {
         while(true){
             System.out.printf("Send> ");
             String message = scanner.nextLine();
-            if(message.equals("") || message.equals("/n")){
+            if(message.equals("") || message.equals("\n")){
                 continue;
             }else{
                 manager.send(message);
@@ -31,19 +30,6 @@ public class s implements Runnable {
         }
     }
 
-	public void run() {
-		SSLServerSocket sslserversocket;
-        try {
-			sslserversocket = getServerSocket(9991);
-            while (true) {
-                SSLSocket  client = (SSLSocket)sslserversocket.accept();
-                socketList.add(client);
-                new Thread(new SSocket(client,socketList,FileList)).start();
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
     public void send(String message){
 
         for(Socket s:socketList){
@@ -56,7 +42,6 @@ public class s implements Runnable {
             }
         }
     }
-
 
 
     private static SSLServerSocket getServerSocket(int thePort)
@@ -82,7 +67,7 @@ public class s implements Runnable {
 
             sslContext.init(kmf.getKeyManagers(),null,null);
 
-            
+
             SSLServerSocketFactory factory=sslContext.getServerSocketFactory();
 
             s=(SSLServerSocket)factory.createServerSocket(thePort);
@@ -94,71 +79,86 @@ public class s implements Runnable {
         return(s);
     }
 
-    
+    public void run() {
+        try {
+            SSLServerSocket sslserversocket = getServerSocket(9991);
+            while (true) {
+                SSLSocket  client = (SSLSocket)sslserversocket.accept();
+                socketList.add(client);
+                new Thread(new SSocket(client,socketList,FileList)).start();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
     class SSocket implements Runnable {
         SSLSocket client;
-        List<SSLSocket> socketList;
-        List<File> fileList;
+        List<Socket> socketList;
+        List<myFile> fileList;
 
-        public SSocket(SSLSocket client,List<SSLSocket> socketList,List<File> fileList) {
+        public SSocket(SSLSocket client,List<Socket> socketList,List<myFile> fileList) {
             this.client = client;
             this.socketList = socketList;
             this.fileList = fileList;
         }
 
         public void run() {
-            BufferedReader  input;
+            BufferedReader input;
             PrintWriter output;
             try {
                 input = new BufferedReader(new InputStreamReader(client.getInputStream()));
-                output = new PrintWriter(new BufferedOutputStream(client.getOutputStream()),true);
+                output = new PrintWriter(new BufferedOutputStream(client.getOutputStream()), true);
 
-                while(true){
+                while (true) {
                     String listMsg = input.readLine();
                     String type = listMsg.split("sprt")[0];
 
-                    if(type.equals("EXIT"))
-                    {
+                    if (type.equals("EXIT")) {
                         output.println("server close");
                         socketList.remove(client);
                         System.out.println("connection close");
                     }
-                    if(type.equals("FILE"))
-                    {
+
+                    //-a fileName
+                    if (type.equals("FILE")) {
+                        //FILE % filename % data
                         try {
                             String fileName = listMsg.split("sprt")[1];
                             String info = listMsg.split("sprt")[2];
-                            File f = createFile(fileName,info);
+                            File f = StoreFile(fileName, info);
                             //System.out.println(info);
                             output.println("Receive " + fileName + "successfully");
-                            fileList.add(f);
-                            for(File file: fileList)
-                            {
-                                System.out.println(file.toString());
+                            myFile mf = new myFile(f);
+                            fileList.add(mf);
+
+                            //Not necessary. Just for testing
+                            for (myFile file : fileList) {
+                                System.out.println(file.getFileName());
                             }
-                        }catch (Exception e){e.printStackTrace();}
-                    }
-                    if(type.equals("NORMAL"))
-                    {
-                        String info = listMsg.split("sprt")[1];
-                        System.out.println("Receive Normal Message from" + client.getInetAddress()+":\n" + info);
-                    }
-                    if(type.equals("DOWNLOAD"))
-                    {
-                        String fileName = "H:\\"+listMsg.split("sprt")[1]; //DOWNLOAD%fileName%-c% number'
-                        System.out.println("Receive DOWNLOAD "+fileName + " command from "+ client.getInetAddress()+ ":\n");
-
-                        if(fileList.size() == 0)
-                        {
-                            output.println("NO FILE EXISTS !");
+                        } catch (Exception e) {
+                            e.printStackTrace();
                         }
-                        else {
-                            for (File f : fileList) {
-                                if (f.toString().equals(fileName)) {
-                                    BufferedReader br = new BufferedReader(new FileReader(f));
+                    }
+                    if (type.equals("NORMAL")) {
+                        String info = listMsg.split("sprt")[1];
+                        System.out.println("Receive Normal Message from" + client.getInetAddress() + ":\n" + info);
+                    }
 
-                                    while(br.ready()){
+                    // -f filename
+                    if (type.equals("DOWNLOAD")) {
+                        //DOWNLOAD % filename
+                        String fileName = "H:\\" + listMsg.split("sprt")[1];
+                        System.out.println("Receive DOWNLOAD " + fileName + " command from " + client.getInetAddress() + ":\n");
+
+                        if (fileList.size() == 0) {
+                            output.println("NO FILE EXISTS !");
+                        } else {
+                            for (myFile mf : fileList) {
+                                //Looking at the directory of a particular file
+                                if (mf.getFileName().equals(fileName)) {
+                                    BufferedReader br = new BufferedReader(new FileReader(mf.getFile()));
+                                    while (br.ready()) {
                                         output.println(br.readLine());
                                     }
                                     break;
@@ -169,37 +169,74 @@ public class s implements Runnable {
                         }
                     }
 
-                    if(type.equals("LIST"))
-                    {
-                        System.out.println("Receive List Command from "+ client.getInetAddress()+":\n");
-                        if(fileList.size() == 0)
-                        {
+                    //-f filename -c number
+                    if (type.equals("FC")) {
+                        //FC%fileName%number
+
+                    }
+
+                    //-f filename -n name
+                    if (type.equals("FN")) {
+                        //FN%fileName%name
+                    }
+
+                    //-l -c number
+                    if (type.equals("LC")) {
+                        //LC%fileName%number
+                        String requiredFileName = listMsg.split("sprt")[1];
+                        int requiredCircleNumber = Integer.valueOf(listMsg.split("sprt")[2]);
+
+                        System.out.println("Receive List+Circle Command from " + client.getInetAddress() + ":\n");
+                        if (fileList.size() == 0) {
                             output.println("No file exist");
-                        }
-                        else
-                        {
-                            for(File f : fileList)
-                            {
-                                output.println(f.toString());
+                        } else {
+                            for (myFile f : fileList) {
+                                if (f.getFileName().equals(requiredFileName) && f.getCircleSize() == requiredCircleNumber) {
+                                    output.println(f.getFileName() + f.getHowManyPeopleHaveVouched() + f.getCircleSize());
+                                }
                             }
+                            // Give a message that the loop finished. If nothing returns at this point the client will know.
+                            output.println("Command execution finished ");
                         }
                     }
+
+                    //-l -n name
+                    if (type.equals("LN")) {
+                        //LC%fileName%Name
+                    }
+
+                    //-u certificateName
+                    if (type.equals("CER")) {
+                        //CRE%certificateName
+                        String certificateName = listMsg.split("sprt")[1];
+                        System.out.println("Receive CER " + certificateName + " command from " + client.getInetAddress() + ":\n");
+
+                        // A.cer -> certificate detail 
+                        // B.cer -> certificate detail
+                        CertificateMap.put(certificateName,storeCertificate(certificateName)); 
+						for(String name : CertificateMap.keySet())
+						{
+							System.out.println(name);
+						}
+                       
+                    }
+
+                    // -v filename certificate
+                    if (type.equals("VOUCH")) {
+
+                    }
+
                 }
             } catch (IOException e) {
                 e.printStackTrace();
             }
 
         }
-        public void download(File file)
-        {
 
-        }
-
-        public File createFile(String fileName,String info)
+        public File StoreFile(String fileName, String info)
         {
             File f = new File("H:/" + fileName);
             try {
-                //What path name? Can be replace by explicit directory, not necessary G:/
                 FileWriter fw = new FileWriter(f);
                 PrintWriter pw = new PrintWriter(fw);
                 pw.println(info);
@@ -209,4 +246,82 @@ public class s implements Runnable {
             return  f;
         }
     }
+
+    public X509Certificate storeCertificate(String CerName)
+    {
+        try {
+           File InFile = new File("G:/"+CerName);
+           File OutFile = new File ("H:/"+CerName);
+
+            FileInputStream fis = new FileInputStream(InFile);
+            FileOutputStream fos = new FileOutputStream(OutFile);
+
+
+            CertificateFactory certificate_factory = CertificateFactory.getInstance("X.509");
+            X509Certificate certificate = (X509Certificate) certificate_factory.generateCertificate(fis);
+
+            fis.close();
+
+            //Storing the Certificate locally
+            byte[] temp = certificate.getEncoded();
+            fos.write(temp);
+            fos.close();
+
+            return  certificate;
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
+        return null;
+    }
 }
+
+class myFile {
+    ArrayList<String> vouch = new ArrayList<>();
+    File FileName;
+    int HowManyPeopleHaveVouched = 0;
+    int circleSize = 0;
+
+    public ArrayList<String> getVouch() {
+        return vouch;
+    }
+
+    public String getFileName() {
+        return FileName.toString();
+    }
+
+    public File getFile()
+    {
+        return FileName;
+    }
+
+    public int getHowManyPeopleHaveVouched()
+    {
+        return HowManyPeopleHaveVouched;
+    }
+
+    public int getCircleSize()
+    {
+        return circleSize;
+    }
+
+    public void setVouch(String person) {
+        vouch.add(person);
+    }
+
+    public void setHowManyPeopleHaveVouched() {
+        HowManyPeopleHaveVouched ++;
+    }
+
+    public void setCircleSize(int circleSize) {
+        this.circleSize = circleSize;
+    }
+
+    public myFile(File fileName) {
+        FileName = fileName;
+    }
+
+}
+
+
