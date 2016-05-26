@@ -64,3 +64,10 @@ Clarifications
 Please post requests for clarification about any aspect of the project to help3002 so that all students may remain equally informed. 
 Clarifications will be also added to the project clarifications webpage, and additional materials may be addded to the project resources webpage.
 Good luck,
+
+Thursday 26/5/2016
+Implement -h hostname:port  at log in.
+-h localhost:9991 will log you in.
+We use this to connect other computer.
+
+Remember to change directory when using -a,-f and -u.
