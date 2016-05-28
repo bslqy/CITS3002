@@ -16,10 +16,98 @@ public class s implements Runnable {
 
     public static void main(String[] args) {
         s manager = new s();
-        new Thread(manager).start();
-        Scanner scanner = new Scanner(System.in);
+       
+		try{
+			File aFile = new File("./A.crt");
+			FileInputStream aFis = new FileInputStream(aFile);
+			File bFile = new File("./B.crt");
+			FileInputStream bFis = new FileInputStream(bFile);
+			File cFile = new File("./C.crt");
+			FileInputStream cFis = new FileInputStream(cFile);
+			File dFile = new File("./D.crt");
+			FileInputStream dFis = new FileInputStream(dFile);
 
-        while(true){
+
+         CertificateFactory certificate_factory = CertificateFactory.getInstance("X.509");
+         X509Certificate As = (X509Certificate) certificate_factory.generateCertificate(aFis);
+         X509Certificate Bs = (X509Certificate) certificate_factory.generateCertificate(bFis);
+         X509Certificate Cs = (X509Certificate) certificate_factory.generateCertificate(cFis);
+         X509Certificate Ds = (X509Certificate) certificate_factory.generateCertificate(dFis);
+		 
+		// X509Certificate Es = (X509Certificate) certificate_factory.generateCertificate(aFis);
+		 
+         aFis.close();
+		 bFis.close();
+		 cFis.close();
+		 dFis.close();
+		 
+		 File f = new File("cText.txt");
+		 myFile testF = new myFile(f);
+		 
+		 CertListItem A = new CertListItem(As);
+		 A.addCert(As);
+		 
+		 CertListItem B = new CertListItem(Bs);
+ 		 B.addCert(Cs);
+ 		 B.addCert(Ds);
+		
+		 CertListItem C = new CertListItem(Cs);
+		 
+		 CertListItem D = new CertListItem(Ds);
+		 D.addCert(Bs);
+		 
+		 testF.addVouch(A);
+		 testF.addVouch(B);
+		 testF.addVouch(C);
+		 testF.addVouch(D);
+		 
+		 // System.out.println("EQUAL? " + As.equals(testF.fileVouchedBy.get(3).getVouchedFor().get(0)));
+		 
+ 		System.out.println("********************");
+ 		System.out.println("\nSearch for circle containing " + "D" +"...");
+ 		System.out.print("\n");
+ 		testF.searchThrough(As);
+ 		System.out.println("Is there a circle? " + testF.isCircle);
+ 		System.out.print("\n");
+ 		System.out.println("Size of circle is: " + testF.circleSize);
+ 		System.out.print("\n");
+ 		System.out.print("Circle is: ");
+		
+		/*X509Certificate cert = ...;
+
+		X500Name x500name = new JcaX509CertificateHolder(cert).getSubject();
+		RDN cn = x500name.getRDNs(BCStyle.CN)[0];
+
+		return IETFUtils.valueToString(cn.getFirst().getValue());
+		 */
+ 		for(int i = 0; i < testF.actualList.size(); i++){
+			X509Certificate temp = testF.actualList.get(i);
+			
+			if(temp.equals(As)){
+ 				System.out.print("A-");
+			}else if(temp.equals(Bs)){
+ 				System.out.print("B-");
+			}else if(temp.equals(Cs)){
+ 				System.out.print("C-");
+			}else if(temp.equals(Ds)){
+ 				System.out.print("D-");
+			}
+ 		}
+		
+		System.out.println("\n\n********************");
+     }
+     catch (Exception e)
+     {
+         e.printStackTrace();
+     }
+		
+		//==========
+		
+		//==========
+
+      /*	new Thread(manager).start();	 
+		  Scanner scanner = new Scanner(System.in);  
+	  	while(true){
             System.out.printf("Send> ");
             String message = scanner.nextLine();
             if(message.equals("") || message.equals("\n")){
@@ -27,7 +115,7 @@ public class s implements Runnable {
             }else{
                 manager.send(message);
             }
-        }
+        }*/
     }
 
     public void send(String message){
@@ -49,7 +137,8 @@ public class s implements Runnable {
         SSLServerSocket s=null;
         try
         {
-            String key="G:\\mySrvKeystore";
+            //String key="G:\\mySrvKeystore";
+			String key="./mySrvKeystore";
 
             char keyStorePass[]="123456".toCharArray();
 
@@ -148,7 +237,8 @@ public class s implements Runnable {
                     // -f filename
                     if (type.equals("DOWNLOAD")) {
                         //DOWNLOAD % filename
-                        String fileName = "H:\\" + listMsg.split("sprt")[1];
+                        //String fileName = "H:\\" + listMsg.split("sprt")[1];
+						String fileName = "./" + listMsg.split("sprt")[1];
                         System.out.println("Receive DOWNLOAD " + fileName + " command from " + client.getInetAddress() + ":\n");
 
                         if (fileList.size() == 0) {
@@ -278,14 +368,102 @@ public class s implements Runnable {
 }
 
 class myFile {
-    ArrayList<String> vouch = new ArrayList<>();
+	public ArrayList<CertListItem> fileVouchedBy;
     File FileName;
     int HowManyPeopleHaveVouched = 0;
     int circleSize = 0;
-
-    public ArrayList<String> getVouch() {
-        return vouch;
+	
+    public myFile(File fileName) {
+        FileName = fileName;
+		fileVouchedBy = new ArrayList<CertListItem>(); //initialize this with...
+		HowManyPeopleHaveVouched = fileVouchedBy.size(); ////initialize this with...
     }
+	
+	public void addVouch(CertListItem item){
+		fileVouchedBy.add(item);
+		HowManyPeopleHaveVouched++;
+	}
+	
+	public boolean firstTime = true;
+	public X509Certificate startingPoint = null;
+	public boolean isCircle = false;
+	//public int circleSize = 0;
+	public int sizeCounter = 0;
+	
+	public ArrayList<X509Certificate> circleList = new ArrayList<X509Certificate>();
+	public ArrayList<X509Certificate> actualList = new ArrayList<X509Certificate>();
+	
+	public void searchThrough(X509Certificate start){
+		
+		if(find(start) == -1){
+			return;
+		}else{
+		
+			if(firstTime == false){
+				if(start.equals(startingPoint)){
+					//System.out.println(start);
+					//System.out.println("Completed.\n");
+					circleSize = sizeCounter;
+					isCircle = true;
+					circleList.add(start);
+					actualList = (ArrayList<X509Certificate>)circleList.clone();
+					return;
+				}
+			}else{
+			
+				firstTime = false;
+				startingPoint = start;
+				isCircle = false;
+				circleSize = 0;
+				sizeCounter = 0;
+		}
+		
+		
+			//System.out.println(start);
+			CertListItem node = fileVouchedBy.get(find(start));
+			
+			ArrayList<X509Certificate> temp = node.getVouchedFor();
+			
+			//System.out.println(node.getSize());
+			//System.out.println(temp.size());
+			
+			for(int i = 0; i < node.getSize(); i++){
+				
+				if(find(temp.get(i)) != -1){
+				CertListItem nextNode = fileVouchedBy.get(find(temp.get(i)));
+				//System.out.println("aaaa" + nextNode.getTravelled());
+				sizeCounter++;
+				circleList.add(start);
+				searchThrough(temp.get(i));
+				sizeCounter--;
+				circleList.remove(start);
+			}
+			}
+					
+			
+		}
+		
+	}
+	
+	public int find(X509Certificate s){
+		for(int i = 0; i < getHowManyPeopleHaveVouched(); i++) {
+			//System.out.println("SSSS is:" + s);
+			//System.out.println("==========");
+			//System.out.println("Number   "+ i + "   FILE is:" + fileVouchedBy.get(i).getCert());
+			if(fileVouchedBy.get(i).getCert().equals(s)){
+				//System.out.println("here");
+				//System.out.println(i);
+				return i;
+			}
+		}
+		
+		return -1;
+	}
+
+	
+	public boolean getCircle(String name){
+		return false;
+	}
 
     public String getFileName() {
         return FileName.toString();
@@ -304,24 +482,52 @@ class myFile {
     public int getCircleSize()
     {
         return circleSize;
-    }
+	}
 
-    public void setVouch(String person) {
-        vouch.add(person);
-    }
 
-    public void setHowManyPeopleHaveVouched() {
-        HowManyPeopleHaveVouched ++;
-    }
-
-    public void setCircleSize(int circleSize) {
-        this.circleSize = circleSize;
-    }
-
-    public myFile(File fileName) {
-        FileName = fileName;
-    }
 
 }
+
+class CertListItem {
+
+	private X509Certificate certificate;
+	ArrayList<X509Certificate> vouchedFor;
+
+	public CertListItem(X509Certificate cert){
+		this.certificate = cert;
+		this.vouchedFor = new ArrayList<X509Certificate>();
+	}
+
+	// return position of certificate, -1 if not in this list
+	public int findCert(X509Certificate cert) {
+		//return vouchedFor.indexOf(cert);
+		//TODO
+		for(int i = 0; i < getSize(); i++){
+			if(vouchedFor.get(i).equals(cert)){
+				return i;
+			}
+		}
+
+		return -1;
+	}
+	
+	public void addCert(X509Certificate cert){
+		// TODO add if not equal to certificate
+		vouchedFor.add(cert);
+	}
+
+	public X509Certificate getCert(){
+		return certificate;
+	}
+
+	public ArrayList<X509Certificate> getVouchedFor(){
+		return vouchedFor;
+	}
+
+	public int getSize(){
+		return vouchedFor.size();
+	}
+}
+
 
 
